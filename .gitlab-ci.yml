@@ -1,0 +1,9 @@
+variables:
+  PLUGIN_NAME: 'similarTitlesReport'
+
+include:
+  - project: 'documentacao-e-tarefas/modelosparaintegracaocontinua'
+    ref: stable-3_5_0
+    file:
+      - 'templates/groups/pkp_plugin.yml'
+      - 'templates/groups/ojs/unit_tests.yml'
