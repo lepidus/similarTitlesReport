@@ -7,3 +7,11 @@ include:
     file:
       - 'templates/groups/pkp_plugin.yml'
       - 'templates/groups/ojs/unit_tests.yml'
+      - 'templates/groups/ojs/cypress_tests.yml'
+
+# Additive report plugin: it does not change core behaviour, so the native OJS
+# regression suite is skipped. The plugin's own Cypress specs still run via
+# plugin_integration_tests_ojs.
+ojs_integration_tests:
+  rules:
+    - when: never
