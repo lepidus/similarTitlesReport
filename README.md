@@ -1,3 +1,5 @@
+**Português Brasileiro** | [English](/docs/README-en.md) | [Español](/docs/README-es.md)
+
 # Relatório de títulos similares
 
 Plugin **generic** para OJS que adiciona uma página em `Estatísticas` > `Títulos similares`, listando pares de submissões ativas cujos títulos são similares.
