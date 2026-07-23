@@ -122,6 +122,7 @@ class SimilarTitlesDataProvider
             ->join('publications as p', 's.current_publication_id', '=', 'p.publication_id')
             ->where('s.context_id', '=', $contextId)
             ->where('s.status', '=', PKPSubmission::STATUS_QUEUED)
+            ->where('s.submission_progress', '=', '')
             ->when(
                 $this->allowedSectionIds !== null,
                 fn ($query) => $query->whereIn('p.section_id', $this->allowedSectionIds)
