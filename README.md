@@ -1,42 +1,42 @@
-**Português Brasileiro** | [English](/docs/README-en.md) | [Español](/docs/README-es.md)
+**English** | [Português Brasileiro](docs/README-pt_BR.md) | [Español](docs/README-es.md)
 
-# Relatório de títulos similares
+# Similar titles report
 
-Plugin **generic** para OJS que adiciona uma página em `Estatísticas` > `Títulos similares`, listando pares de submissões ativas cujos títulos são similares.
+**generic** plugin for OJS that adds a page under `Statistics` > `Similar titles`, listing pairs of active submissions whose titles are similar.
 
-## Compatibilidade
+## Compatibility
 
-Este plugin é compatível com OJS 3.5.0.x.
+This plugin is compatible with OJS 3.5.0.x.
 
-## Instalação
+## Installation
 
-Para instalação em produção, utilize o pacote `.tar.gz` publicado na página de releases do plugin.
+For a production installation, use the `.tar.gz` package published on the plugin's releases page.
 
-No OJS, acesse `Configurações` > `Website` > `Plugins` > `Enviar novo plugin`, selecione o pacote do plugin e confirme a instalação.
+In OJS, go to `Settings` > `Website` > `Plugins` > `Upload a new plugin`, select the plugin package and confirm the installation.
 
-## Uso
+## Usage
 
-Após habilitar o plugin, a página fica disponível em `Estatísticas` > `Títulos similares`.
+After enabling the plugin, the page is available under `Statistics` > `Similar titles`.
 
-### Acesso
+### Access
 
-Gerentes e administradores do site consultam as submissões ativas do contexto. Editores de seção consultam somente submissões nas quais possuem uma atribuição de estágio como editor de seção, seguindo o escopo de acesso do fluxo editorial do OJS.
+Journal managers and site administrators query active submissions in the context. Section editors query only submissions for which they have a workflow stage assignment as a section editor, following the OJS editorial workflow access scope.
 
-### Critério de similaridade
+### Similarity criterion
 
-A listagem compara títulos com `similar_text` e exibe pares com similaridade maior ou igual a 70%. O único pré-filtro compara o comprimento dos títulos e descarta apenas pares que matematicamente não podem atingir o limiar.
+The listing compares titles with `similar_text` and shows pairs with similarity greater than or equal to 70%. The only pre-filter compares title lengths and discards only pairs that mathematically cannot reach the threshold.
 
-Para manter limites previsíveis de tempo e memória, o relatório compara no máximo as 200 submissões ativas acessíveis mais recentes e exibe no máximo os 1.000 pares com maior similaridade. A página apresenta um aviso quando qualquer um desses limites é atingido.
+To keep processing time and memory predictable, the report compares at most the 200 most recent accessible active submissions and displays at most the 1,000 pairs with the highest similarity. The page displays a notice whenever either limit is reached.
 
-A similaridade calculada é guardada no cache da aplicação por 30 dias. A chave inclui os IDs das submissões e o `sha256` dos títulos normalizados; se um título mudar, a comparação é recalculada automaticamente.
+The computed similarity is stored in the application cache for 30 days. The key includes the submission IDs and the `sha256` of the normalized titles; if a title changes, the comparison is recomputed automatically.
 
-## Desenvolvimento
+## Development
 
-Clone o plugin dentro de `plugins/generic/similarTitlesReport` em uma instalação local do OJS 3.5.
+Clone the plugin into `plugins/generic/similarTitlesReport` in a local OJS 3.5 installation.
 
-### Testes PHPUnit
+### PHPUnit tests
 
-Execute a partir da raiz do OJS:
+Run from the OJS root:
 
 ```bash
 TESTS=$(find -L plugins/generic/similarTitlesReport -name tests -type d -maxdepth 1) \
@@ -45,7 +45,7 @@ TESTS=$(find -L plugins/generic/similarTitlesReport -name tests -type d -maxdept
 
 ### PHP CS Fixer
 
-Execute a partir da raiz do OJS antes de considerar alterações PHP prontas:
+Run from the OJS root before considering PHP changes ready:
 
 ```bash
 php lib/pkp/lib/vendor/bin/php-cs-fixer fix \
@@ -53,9 +53,9 @@ php lib/pkp/lib/vendor/bin/php-cs-fixer fix \
   plugins/generic/similarTitlesReport/
 ```
 
-### Testes Cypress
+### Cypress tests
 
-Execute a partir da raiz do OJS:
+Run from the OJS root:
 
 ```bash
 npx cypress run \
@@ -63,10 +63,10 @@ npx cypress run \
   --browser chrome
 ```
 
-Os testes Cypress do plugin não são idempotentes. Rode a suíte completa contra uma base de dados fresca, na ordem dos specs existentes.
+The plugin's Cypress tests are not idempotent. Run the full suite against a fresh database, in the order of the existing specs.
 
-## Licença
+## License
 
-Este plugin é licenciado sob a GNU General Public License v3.0.
+This plugin is licensed under the GNU General Public License v3.0.
 
 _Copyright (c) 2026 Lepidus Tecnologia_

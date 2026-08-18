@@ -1,4 +1,4 @@
-**Español** | [Português Brasileiro](/README.md) | [English](/docs/README-en.md)
+**Español** | [English](../README.md) | [Português Brasileiro](README-pt_BR.md)
 
 # Informe de títulos similares
 
