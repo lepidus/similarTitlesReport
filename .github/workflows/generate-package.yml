@@ -1,0 +1,87 @@
+name: Create release package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create release and package
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_NAME: similarTitlesReport
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check version.xml
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 <<'PY'
+          import datetime
+          import os
+          import xml.etree.ElementTree as ET
+
+          version = ET.parse('version.xml').getroot()
+          expected = {
+              'application': os.environ['PLUGIN_NAME'],
+              'release': os.environ['RELEASE_TAG'].removeprefix('v'),
+              'date': datetime.date.today().isoformat(),
+          }
+
+          for field, expected_value in expected.items():
+              actual_value = version.findtext(field)
+              if actual_value != expected_value:
+                  raise SystemExit(
+                      f'version.xml: {field} is {actual_value!r}; '
+                      f'expected {expected_value!r}'
+                  )
+          PY
+
+      - name: Create the tar.gz package
+        run: |
+          git archive \
+            --format=tar.gz \
+            --prefix="${PLUGIN_NAME}/" \
+            --output="${PLUGIN_NAME}.tar.gz" \
+            HEAD \
+            -- \
+            . \
+            ':(exclude).agents' \
+            ':(exclude).codex' \
+            ':(exclude).github' \
+            ':(exclude).gitlab-ci.yml' \
+            ':(exclude)AGENTS.md' \
+            ':(exclude)cypress' \
+            ':(exclude)tests'
+
+      - name: Create the release and upload the package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          generated_notes=$(gh api \
+            --method POST \
+            "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            --field "tag_name=${GITHUB_REF_NAME}" \
+            --jq '.body')
+
+          {
+            printf '## Compatibilidade\n\n'
+            printf -- '- Aplicação: OJS\n'
+            printf -- '- Versões compatíveis: OJS 3.5.x\n'
+            printf -- '- Ramo: stable-3_5_0\n'
+            printf -- '- Versão do plugin: %s\n\n' "${GITHUB_REF_NAME#v}"
+            printf '## Alterações\n\n%s\n\n' "${generated_notes}"
+            printf '## Instalação\n\n'
+            printf 'Baixe o pacote anexado à release e instale-o pelo gerenciador de plugins do OJS.\n'
+          } > release-notes.md
+
+          gh release create "${GITHUB_REF_NAME}" \
+            "${PLUGIN_NAME}.tar.gz" \
+            --title="Release ${GITHUB_REF_NAME}" \
+            --notes-file=release-notes.md
