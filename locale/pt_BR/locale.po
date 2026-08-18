@@ -18,6 +18,12 @@ msgstr "Títulos similares"
 msgid "plugins.generic.similarTitlesReport.noResults"
 msgstr "Nenhum par de submissões ativas com pelo menos {$threshold}% de similaridade no título foi encontrado."
 
+msgid "plugins.generic.similarTitlesReport.limit.submissions"
+msgstr "Para limitar o tempo e a memória de processamento, o relatório considerou somente as {$maxSubmissions} submissões ativas acessíveis mais recentes."
+
+msgid "plugins.generic.similarTitlesReport.limit.pairs"
+msgstr "Foram exibidos somente os {$maxPairs} pares com maior similaridade."
+
 msgid "plugins.generic.similarTitlesReport.column.similarity"
 msgstr "Similaridade"
 

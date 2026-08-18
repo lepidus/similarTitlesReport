@@ -16,6 +16,18 @@
 			{translate key="plugins.generic.similarTitlesReport.description" threshold=$threshold}
 		</p>
 
+		{if $submissionsTruncated}
+			<p role="status">
+				{translate key="plugins.generic.similarTitlesReport.limit.submissions" maxSubmissions=$maxSubmissions}
+			</p>
+		{/if}
+
+		{if $pairsTruncated}
+			<p role="status">
+				{translate key="plugins.generic.similarTitlesReport.limit.pairs" maxPairs=$maxPairs}
+			</p>
+		{/if}
+
 		{if $similarTitlePairs|@count > 0}
 			<table class="pkpTable">
 				<thead>

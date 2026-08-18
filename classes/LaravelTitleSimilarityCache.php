@@ -44,7 +44,7 @@ class LaravelTitleSimilarityCache implements TitleSimilarityCache
     ): void {
         Cache::put(
             $this->getCacheKey($firstSubmissionId, $firstTitleHash, $secondSubmissionId, $secondTitleHash),
-            round($similarity, 2),
+            $similarity,
             self::TTL_SECONDS
         );
     }
@@ -61,7 +61,7 @@ class LaravelTitleSimilarityCache implements TitleSimilarityCache
         }
 
         return sprintf(
-            'similarTitlesReport:titleSimilarity:%d:%s:%d:%s',
+            'similarTitlesReport:titleSimilarity:v2:%d:%s:%d:%s',
             $firstSubmissionId,
             $firstTitleHash,
             $secondSubmissionId,

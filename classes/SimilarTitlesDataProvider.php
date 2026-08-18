@@ -26,12 +26,14 @@ class SimilarTitlesDataProvider
 
     private PublicationTitleFormatter $titleFormatter;
 
+    private bool $submissionsTruncated = false;
+
     /**
-     * @param ?int[] $allowedSectionIds Null means unrestricted inside the current context.
+     * @param ?int[] $allowedSubmissionIds Null means unrestricted inside the current context.
      */
     public function __construct(
         private Context $context,
-        private ?array $allowedSectionIds,
+        private ?array $allowedSubmissionIds,
         ?SimilarTitlePairFinder $pairFinder = null
     ) {
         $this->pairFinder = $pairFinder ?? new SimilarTitlePairFinder(
@@ -50,11 +52,17 @@ class SimilarTitlesDataProvider
     public function getPairs(): array
     {
         $submissions = $this->getSubmissions();
-        if (count($submissions) < 2) {
-            return [];
-        }
-
         return $this->pairFinder->findPairs($submissions);
+    }
+
+    public function wereSubmissionsTruncated(): bool
+    {
+        return $this->submissionsTruncated || $this->pairFinder->wereSubmissionsTruncated();
+    }
+
+    public function werePairsTruncated(): bool
+    {
+        return $this->pairFinder->werePairsTruncated();
     }
 
     /**
@@ -62,6 +70,7 @@ class SimilarTitlesDataProvider
      */
     private function getSubmissions(): array
     {
+        $this->submissionsTruncated = false;
         $contextId = (int) $this->context->getId();
         $rows = $this->getBaseRows($contextId);
         if ($rows->isEmpty()) {
@@ -118,17 +127,25 @@ class SimilarTitlesDataProvider
      */
     private function getBaseRows(int $contextId): Collection
     {
-        return DB::table('submissions as s')
+        $rows = DB::table('submissions as s')
             ->join('publications as p', 's.current_publication_id', '=', 'p.publication_id')
             ->where('s.context_id', '=', $contextId)
             ->where('s.status', '=', PKPSubmission::STATUS_QUEUED)
             ->where('s.submission_progress', '=', '')
             ->when(
-                $this->allowedSectionIds !== null,
-                fn ($query) => $query->whereIn('p.section_id', $this->allowedSectionIds)
+                $this->allowedSubmissionIds !== null,
+                fn ($query) => $query->whereIn('s.submission_id', $this->allowedSubmissionIds)
             )
-            ->orderBy('s.submission_id')
+            ->orderByDesc('s.submission_id')
+            ->limit(SimilarTitlePairFinder::MAX_SUBMISSIONS + 1)
             ->get(['s.submission_id', 'p.publication_id']);
+
+        if ($rows->count() > SimilarTitlePairFinder::MAX_SUBMISSIONS) {
+            $this->submissionsTruncated = true;
+            $rows = $rows->take(SimilarTitlePairFinder::MAX_SUBMISSIONS);
+        }
+
+        return $rows->sortBy('submission_id')->values();
     }
 
     /**

@@ -20,11 +20,13 @@ After enabling the plugin, the page is available under `Statistics` > `Similar t
 
 ### Access
 
-Journal managers and site administrators query every active submission in the context. Section editors are restricted to the sections associated with the user.
+Journal managers and site administrators query active submissions in the context. Section editors query only submissions for which they have a workflow stage assignment as a section editor, following the OJS editorial workflow access scope.
 
 ### Similarity criterion
 
-The listing compares titles with `similar_text` and shows pairs with similarity greater than or equal to 70%. To avoid timeouts on larger databases, the plugin applies pre-filters by length and by approximate terms before the final calculation, but the displayed percentage is always the one returned by `similar_text`.
+The listing compares titles with `similar_text` and shows pairs with similarity greater than or equal to 70%. The only pre-filter compares title lengths and discards only pairs that mathematically cannot reach the threshold.
+
+To keep processing time and memory predictable, the report compares at most the 200 most recent accessible active submissions and displays at most the 1,000 pairs with the highest similarity. The page displays a notice whenever either limit is reached.
 
 The computed similarity is stored in the application cache for 30 days. The key includes the submission IDs and the `sha256` of the normalized titles; if a title changes, the comparison is recomputed automatically.
 

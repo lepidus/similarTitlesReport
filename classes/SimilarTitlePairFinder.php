@@ -17,11 +17,15 @@ class SimilarTitlePairFinder
 {
     public const DEFAULT_THRESHOLD = 70.0;
 
-    private const MINIMUM_TERM_OVERLAP = 0.5;
+    public const MAX_SUBMISSIONS = 200;
 
-    private const MINIMUM_TERM_SIMILARITY = 85.0;
+    public const MAX_PAIRS = 1000;
 
     private const MAX_COMPARISON_TITLE_LENGTH = 500;
+
+    private bool $submissionsTruncated = false;
+
+    private bool $pairsTruncated = false;
 
     public function __construct(
         private float $threshold = self::DEFAULT_THRESHOLD,
@@ -40,6 +44,8 @@ class SimilarTitlePairFinder
      */
     public function findPairs(array $submissions): array
     {
+        $this->submissionsTruncated = false;
+        $this->pairsTruncated = false;
         $pairs = [];
         $preparedSubmissions = $this->prepareSubmissions($submissions);
         $submissionCount = count($preparedSubmissions);
@@ -56,21 +62,30 @@ class SimilarTitlePairFinder
                     continue;
                 }
 
-                $pairs[] = [
-                    'similarity' => round($similarity, 2),
+                $this->addPairToTopResults($pairs, [
+                    'similarity' => $similarity,
                     'first' => $preparedSubmissions[$firstIndex]['submission'],
                     'second' => $preparedSubmissions[$secondIndex]['submission'],
-                ];
+                ]);
             }
         }
 
-        usort(
-            $pairs,
-            fn (array $a, array $b) => [$b['similarity'], $a['first']['submissionId'], $a['second']['submissionId']]
-                <=> [$a['similarity'], $b['first']['submissionId'], $b['second']['submissionId']]
-        );
+        foreach ($pairs as &$pair) {
+            $pair['similarity'] = round($pair['similarity'], 2);
+        }
+        unset($pair);
 
         return $pairs;
+    }
+
+    public function wereSubmissionsTruncated(): bool
+    {
+        return $this->submissionsTruncated;
+    }
+
+    public function werePairsTruncated(): bool
+    {
+        return $this->pairsTruncated;
     }
 
     /**
@@ -80,8 +95,7 @@ class SimilarTitlePairFinder
      *     submission:array{submissionId:int,title:string,authors:string,submissionUrl:string},
      *     normalizedTitle:string,
      *     titleHash:string,
-     *     titleLength:int,
-     *     terms:array<int,string>
+     *     titleLength:int
      * }>
      */
     private function prepareSubmissions(array $submissions): array
@@ -94,12 +108,18 @@ class SimilarTitlePairFinder
                 continue;
             }
 
+            if (count($preparedSubmissions) >= self::MAX_SUBMISSIONS) {
+                $this->submissionsTruncated = true;
+                break;
+            }
+
             $preparedSubmissions[] = [
                 'submission' => $submission,
                 'normalizedTitle' => $normalizedTitle,
                 'titleHash' => hash('sha256', $normalizedTitle),
-                'titleLength' => mb_strlen($normalizedTitle, 'UTF-8'),
-                'terms' => $this->extractTerms($normalizedTitle),
+                // similar_text() compares bytes, so the conservative length
+                // bound must use the same unit.
+                'titleLength' => strlen($normalizedTitle),
             ];
         }
 
@@ -111,24 +131,21 @@ class SimilarTitlePairFinder
      *     submission:array{submissionId:int,title:string,authors:string,submissionUrl:string},
      *     normalizedTitle:string,
      *     titleHash:string,
-     *     titleLength:int,
-     *     terms:array<int,string>
+     *     titleLength:int
      * } $firstSubmission
      * @param array{
      *     submission:array{submissionId:int,title:string,authors:string,submissionUrl:string},
      *     normalizedTitle:string,
      *     titleHash:string,
-     *     titleLength:int,
-     *     terms:array<int,string>
+     *     titleLength:int
      * } $secondSubmission
      */
     private function canReachThreshold(array $firstSubmission, array $secondSubmission): bool
     {
-        if (!$this->canReachThresholdByLength($firstSubmission['titleLength'], $secondSubmission['titleLength'])) {
-            return false;
-        }
-
-        return $this->hasEnoughTermOverlap($firstSubmission['terms'], $secondSubmission['terms']);
+        return $this->canReachThresholdByLength(
+            $firstSubmission['titleLength'],
+            $secondSubmission['titleLength']
+        );
     }
 
     private function canReachThresholdByLength(int $firstLength, int $secondLength): bool
@@ -142,79 +159,17 @@ class SimilarTitlePairFinder
     }
 
     /**
-     * @param string[] $firstTerms
-     * @param string[] $secondTerms
-     */
-    private function hasEnoughTermOverlap(array $firstTerms, array $secondTerms): bool
-    {
-        if (empty($firstTerms) || empty($secondTerms)) {
-            return true;
-        }
-
-        $overlap = $this->countSimilarTerms($firstTerms, $secondTerms);
-        return ($overlap / min(count($firstTerms), count($secondTerms))) >= self::MINIMUM_TERM_OVERLAP;
-    }
-
-    /**
-     * @param string[] $firstTerms
-     * @param string[] $secondTerms
-     */
-    private function countSimilarTerms(array $firstTerms, array $secondTerms): int
-    {
-        $matchedSecondTermIndexes = [];
-        $overlap = 0;
-
-        foreach ($firstTerms as $firstTerm) {
-            foreach ($secondTerms as $secondTermIndex => $secondTerm) {
-                if (isset($matchedSecondTermIndexes[$secondTermIndex])) {
-                    continue;
-                }
-
-                if (!$this->termsAreSimilar($firstTerm, $secondTerm)) {
-                    continue;
-                }
-
-                $matchedSecondTermIndexes[$secondTermIndex] = true;
-                $overlap++;
-                break;
-            }
-        }
-
-        return $overlap;
-    }
-
-    private function termsAreSimilar(string $firstTerm, string $secondTerm): bool
-    {
-        if ($firstTerm === $secondTerm) {
-            return true;
-        }
-
-        if (preg_match('/\d/', $firstTerm . $secondTerm)) {
-            return false;
-        }
-
-        if (!$this->canReachThresholdByLength(strlen($firstTerm), strlen($secondTerm))) {
-            return false;
-        }
-
-        similar_text($firstTerm, $secondTerm, $similarity);
-        return $similarity >= self::MINIMUM_TERM_SIMILARITY;
-    }
-
-    /**
      * @param array{
      *     submission:array{submissionId:int,title:string,authors:string,submissionUrl:string},
      *     normalizedTitle:string,
      *     titleHash:string,
-     *     titleLength:int,
-     *     terms:array<int,string>
+     *     titleLength:int
      * } $firstSubmission
      * @param array{
      *     submission:array{submissionId:int,title:string,authors:string,submissionUrl:string},
      *     normalizedTitle:string,
      *     titleHash:string,
-     *     titleLength:int,
-     *     terms:array<int,string>
+     *     titleLength:int
      * } $secondSubmission
      */
     private function getSimilarity(array $firstSubmission, array $secondSubmission): float
@@ -251,18 +206,43 @@ class SimilarTitlePairFinder
     }
 
     /**
-     * @return string[]
+     * @param array<int,array{
+     *     similarity:float,
+     *     first:array{submissionId:int,title:string,authors:string,submissionUrl:string},
+     *     second:array{submissionId:int,title:string,authors:string,submissionUrl:string}
+     * }> $pairs
      */
-    private function extractTerms(string $title): array
+    private function addPairToTopResults(array &$pairs, array $pair): void
     {
-        $title = $this->removeDiacritics($title);
-        preg_match_all('/[\p{L}\p{N}]{4,}/u', $title, $matches);
-        return array_values(array_unique($matches[0]));
+        if (count($pairs) >= self::MAX_PAIRS) {
+            $this->pairsTruncated = true;
+            if ($this->comparePairs($pair, $pairs[self::MAX_PAIRS - 1]) >= 0) {
+                return;
+            }
+
+            array_pop($pairs);
+        }
+
+        $minimumIndex = 0;
+        $maximumIndex = count($pairs);
+        while ($minimumIndex < $maximumIndex) {
+            $middleIndex = intdiv($minimumIndex + $maximumIndex, 2);
+            if ($this->comparePairs($pair, $pairs[$middleIndex]) < 0) {
+                $maximumIndex = $middleIndex;
+            } else {
+                $minimumIndex = $middleIndex + 1;
+            }
+        }
+
+        array_splice($pairs, $minimumIndex, 0, [$pair]);
     }
 
-    private function removeDiacritics(string $text): string
+    /**
+     * Compare pairs in report order: exact similarity descending, then IDs ascending.
+     */
+    private function comparePairs(array $firstPair, array $secondPair): int
     {
-        $transliteratedText = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
-        return is_string($transliteratedText) ? $transliteratedText : $text;
+        return [$secondPair['similarity'], $firstPair['first']['submissionId'], $firstPair['second']['submissionId']]
+            <=> [$firstPair['similarity'], $secondPair['first']['submissionId'], $secondPair['second']['submissionId']];
     }
 }

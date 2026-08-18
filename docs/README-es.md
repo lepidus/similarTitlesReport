@@ -20,11 +20,13 @@ Después de habilitar el módulo, la página queda disponible en `Estadísticas`
 
 ### Acceso
 
-Los gestores y administradores del sitio consultan todos los envíos activos del contexto. Los editores de sección quedan restringidos a las secciones asociadas al usuario.
+Los gestores y administradores del sitio consultan los envíos activos del contexto. Los editores de sección consultan solamente los envíos en los que tienen una asignación de etapa como editor de sección, siguiendo el ámbito de acceso del flujo editorial de OJS.
 
 ### Criterio de similitud
 
-El listado compara títulos con `similar_text` y muestra pares con similitud mayor o igual al 70%. Para evitar timeouts en bases más grandes, el módulo aplica pre-filtros por tamaño y por términos aproximados antes del cálculo final, pero el porcentaje mostrado es siempre el devuelto por `similar_text`.
+El listado compara títulos con `similar_text` y muestra pares con similitud mayor o igual al 70%. El único pre-filtro compara la longitud de los títulos y descarta solamente los pares que matemáticamente no pueden alcanzar el umbral.
+
+Para mantener límites previsibles de tiempo y memoria, el informe compara como máximo los 200 envíos activos accesibles más recientes y muestra como máximo los 1.000 pares con mayor similitud. La página muestra un aviso cuando se alcanza cualquiera de estos límites.
 
 La similitud calculada se guarda en la caché de la aplicación durante 30 días. La clave incluye los IDs de los envíos y el `sha256` de los títulos normalizados; si un título cambia, la comparación se recalcula automáticamente.
 

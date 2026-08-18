@@ -62,6 +62,17 @@ class SimilarTitlePairFinderTest extends TestCase
         $this->assertGreaterThanOrEqual(70.0, $pairs[0]['similarity']);
     }
 
+    public function testShouldNotDiscardGloballySimilarTitlesWhenNoIndividualTermReachesEightyFivePercent(): void
+    {
+        $pairs = (new SimilarTitlePairFinder())->findPairs([
+            $this->submission(1, 'abcde fghij klmno pqrst'),
+            $this->submission(2, 'abcdx fghix klmnx pqrsx'),
+        ]);
+
+        $this->assertCount(1, $pairs);
+        $this->assertGreaterThanOrEqual(70.0, $pairs[0]['similarity']);
+    }
+
     public function testShouldIgnoreBlankTitles(): void
     {
         $pairs = (new SimilarTitlePairFinder())->findPairs([
@@ -88,12 +99,12 @@ class SimilarTitlePairFinderTest extends TestCase
         $this->assertSame(2, $cache->gets);
     }
 
-    public function testShouldSkipClearlyDifferentTitlesBeforeUsingCacheOrSimilarText(): void
+    public function testShouldEvaluateEqualLengthTitlesWithoutLossyTermPrefilter(): void
     {
-        $cache = new InMemoryTitleSimilarityCache();
+        $cache = new CountingTitleSimilarityCache();
         $submissions = [];
 
-        for ($index = 1; $index <= 200; $index++) {
+        for ($index = 1; $index <= 20; $index++) {
             $submissions[] = $this->submission(
                 $index,
                 sprintf('Termo%03d Unico%03d Especifico%03d', $index, $index, $index)
@@ -102,9 +113,8 @@ class SimilarTitlePairFinderTest extends TestCase
 
         $pairs = (new SimilarTitlePairFinder(cache: $cache))->findPairs($submissions);
 
-        $this->assertSame([], $pairs);
-        $this->assertSame(0, $cache->gets);
-        $this->assertSame(0, $cache->stores);
+        $this->assertCount(190, $pairs);
+        $this->assertSame(190, $cache->gets);
     }
 
     public function testShouldStillCompareCandidateTitlesAfterPrefiltering(): void
@@ -120,6 +130,62 @@ class SimilarTitlePairFinderTest extends TestCase
         $this->assertSame(1, $cache->stores);
     }
 
+    public function testShouldBoundInputComparisonsAndReturnedPairs(): void
+    {
+        $cache = new CountingTitleSimilarityCache();
+        $submissions = [];
+
+        for ($submissionId = 1; $submissionId <= 250; $submissionId++) {
+            $submissions[] = $this->submission($submissionId, 'Identical title for bounded comparison');
+        }
+
+        $finder = new SimilarTitlePairFinder(cache: $cache);
+        $pairs = $finder->findPairs($submissions);
+
+        $this->assertCount(SimilarTitlePairFinder::MAX_PAIRS, $pairs);
+        $this->assertLessThanOrEqual(19900, $cache->gets);
+        $this->assertTrue($finder->wereSubmissionsTruncated());
+        $this->assertTrue($finder->werePairsTruncated());
+    }
+
+    public function testShouldKeepTheMostSimilarPairsWhenTheResultBufferIsTrimmed(): void
+    {
+        $submissions = [];
+        for ($submissionId = 1; $submissionId <= 63; $submissionId++) {
+            $submissions[] = $this->submission($submissionId, sprintf('Distinct title number %03d', $submissionId));
+        }
+        $submissions[] = $this->submission(64, 'Most similar title');
+        $submissions[] = $this->submission(65, 'Most similar title');
+
+        $finder = new SimilarTitlePairFinder(threshold: 0.0);
+        $pairs = $finder->findPairs($submissions);
+
+        $this->assertCount(SimilarTitlePairFinder::MAX_PAIRS, $pairs);
+        $this->assertSame(100.0, $pairs[0]['similarity']);
+        $this->assertSame(64, $pairs[0]['first']['submissionId']);
+        $this->assertSame(65, $pairs[0]['second']['submissionId']);
+        $this->assertTrue($finder->werePairsTruncated());
+    }
+
+    public function testShouldRankPairsByExactSimilarityBeforeRounding(): void
+    {
+        $submissions = [];
+        for ($submissionId = 1; $submissionId <= 46; $submissionId++) {
+            $submissions[] = $this->submission($submissionId, sprintf('Candidate title %03d', $submissionId));
+        }
+
+        $finder = new SimilarTitlePairFinder(
+            threshold: 0.0,
+            cache: new ExactRankingTitleSimilarityCache()
+        );
+        $pairs = $finder->findPairs($submissions);
+
+        $this->assertCount(SimilarTitlePairFinder::MAX_PAIRS, $pairs);
+        $this->assertSame(45, $pairs[0]['first']['submissionId']);
+        $this->assertSame(46, $pairs[0]['second']['submissionId']);
+        $this->assertSame(90.0, $pairs[0]['similarity']);
+    }
+
     /**
      * @return array{submissionId:int,title:string,authors:string,submissionUrl:string}
      */
@@ -131,6 +197,51 @@ class SimilarTitlePairFinderTest extends TestCase
             'authors' => 'Autor de Teste',
             'submissionUrl' => 'https://example.test/submission/' . $submissionId,
         ];
+    }
+}
+
+class CountingTitleSimilarityCache implements TitleSimilarityCache
+{
+    public int $gets = 0;
+
+    public function get(
+        int $firstSubmissionId,
+        string $firstTitleHash,
+        int $secondSubmissionId,
+        string $secondTitleHash
+    ): ?float {
+        $this->gets++;
+        return null;
+    }
+
+    public function store(
+        int $firstSubmissionId,
+        string $firstTitleHash,
+        int $secondSubmissionId,
+        string $secondTitleHash,
+        float $similarity
+    ): void {
+    }
+}
+
+class ExactRankingTitleSimilarityCache implements TitleSimilarityCache
+{
+    public function get(
+        int $firstSubmissionId,
+        string $firstTitleHash,
+        int $secondSubmissionId,
+        string $secondTitleHash
+    ): ?float {
+        return $firstSubmissionId === 45 && $secondSubmissionId === 46 ? 90.004 : 90.001;
+    }
+
+    public function store(
+        int $firstSubmissionId,
+        string $firstTitleHash,
+        int $secondSubmissionId,
+        string $secondTitleHash,
+        float $similarity
+    ): void {
     }
 }
 

@@ -75,7 +75,7 @@ class SimilarTitlesReportPlugin extends GenericPlugin
         }
 
         $access = new ReportAccess($request);
-        if ($access->getAllowedSectionIds() === []) {
+        if ($access->getAllowedSubmissionIds() === []) {
             return false;
         }
 

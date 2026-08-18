@@ -53,12 +53,13 @@ class SimilarTitlesReportHandler extends Handler
         }
 
         $access = new ReportAccess($request);
-        $allowedSectionIds = $access->getAllowedSectionIds();
-        if ($allowedSectionIds === []) {
+        $allowedSubmissionIds = $access->getAllowedSubmissionIds();
+        if ($allowedSubmissionIds === []) {
             throw new NotFoundHttpException();
         }
 
-        $dataProvider = new SimilarTitlesDataProvider($context, $allowedSectionIds);
+        $dataProvider = new SimilarTitlesDataProvider($context, $allowedSubmissionIds);
+        $similarTitlePairs = $dataProvider->getPairs();
         $templateMgr = TemplateManager::getManager($request);
         $templateMgr->assign([
             'breadcrumbs' => [
@@ -73,8 +74,12 @@ class SimilarTitlesReportHandler extends Handler
                 ],
             ],
             'pageTitle' => __('plugins.generic.similarTitlesReport.displayName'),
-            'similarTitlePairs' => $dataProvider->getPairs(),
+            'similarTitlePairs' => $similarTitlePairs,
             'threshold' => SimilarTitlePairFinder::DEFAULT_THRESHOLD,
+            'maxSubmissions' => SimilarTitlePairFinder::MAX_SUBMISSIONS,
+            'maxPairs' => SimilarTitlePairFinder::MAX_PAIRS,
+            'submissionsTruncated' => $dataProvider->wereSubmissionsTruncated(),
+            'pairsTruncated' => $dataProvider->werePairsTruncated(),
         ]);
 
         $this->setupTemplate($request);

@@ -20,11 +20,13 @@ Após habilitar o plugin, a página fica disponível em `Estatísticas` > `Títu
 
 ### Acesso
 
-Gerentes e administradores do site consultam todas as submissões ativas do contexto. Editores de seção ficam restritos às seções associadas ao usuário.
+Gerentes e administradores do site consultam as submissões ativas do contexto. Editores de seção consultam somente submissões nas quais possuem uma atribuição de estágio como editor de seção, seguindo o escopo de acesso do fluxo editorial do OJS.
 
 ### Critério de similaridade
 
-A listagem compara títulos com `similar_text` e exibe pares com similaridade maior ou igual a 70%. Para evitar timeout em bases maiores, o plugin aplica pré-filtros por tamanho e por termos aproximados antes do cálculo final, mas a porcentagem exibida é sempre a retornada por `similar_text`.
+A listagem compara títulos com `similar_text` e exibe pares com similaridade maior ou igual a 70%. O único pré-filtro compara o comprimento dos títulos e descarta apenas pares que matematicamente não podem atingir o limiar.
+
+Para manter limites previsíveis de tempo e memória, o relatório compara no máximo as 200 submissões ativas acessíveis mais recentes e exibe no máximo os 1.000 pares com maior similaridade. A página apresenta um aviso quando qualquer um desses limites é atingido.
 
 A similaridade calculada é guardada no cache da aplicação por 30 dias. A chave inclui os IDs das submissões e o `sha256` dos títulos normalizados; se um título mudar, a comparação é recalculada automaticamente.
 
