@@ -53,17 +53,11 @@ php lib/pkp/lib/vendor/bin/php-cs-fixer fix \
   plugins/generic/similarTitlesReport/
 ```
 
-### Pruebas Cypress
+### Pruebas de integración
 
-Ejecute desde la raíz de OJS:
+La suite PHPUnit incluye cobertura de integración con la base de datos para la consulta del informe, con controles positivos y negativos para envíos completados, incompletos, inactivos e inaccesibles.
 
-```bash
-npx cypress run \
-  --config 'baseUrl=http://localhost:8000,specPattern=plugins/generic/similarTitlesReport/cypress/tests/**/*.cy.js' \
-  --browser chrome
-```
-
-Las pruebas Cypress del módulo no son idempotentes. Ejecute la suite completa contra una base de datos nueva, en el orden de los specs existentes.
+La CI también ejecuta `tests/http-smoke.sh` contra una instancia real de OJS. La prueba de humo verifica la carga del módulo, la ruta, el HTML renderizado y la autorización sin iniciar un navegador.
 
 ## Licencia
 

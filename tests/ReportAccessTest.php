@@ -55,6 +55,32 @@ class ReportAccessTest extends TestCase
         $this->assertNull($access->getAllowedSubmissionIds());
     }
 
+    public function testShouldNotRestrictSiteAdministratorsToAssignedSubmissions(): void
+    {
+        $access = new ReportAccess($this->requestForUserWithRoles(
+            manager: false,
+            siteAdmin: true,
+            subEditor: false
+        ));
+
+        DB::shouldReceive('table')->never();
+
+        $this->assertNull($access->getAllowedSubmissionIds());
+    }
+
+    public function testShouldDenyUsersWithoutEditorialRoles(): void
+    {
+        $access = new ReportAccess($this->requestForUserWithRoles(
+            manager: false,
+            siteAdmin: false,
+            subEditor: false
+        ));
+
+        DB::shouldReceive('table')->never();
+
+        $this->assertSame([], $access->getAllowedSubmissionIds());
+    }
+
     public function testShouldRestrictSectionEditorsToSubmissionsAssignedInTheirRole(): void
     {
         $query = Mockery::mock(Builder::class);

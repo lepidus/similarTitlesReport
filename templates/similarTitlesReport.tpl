@@ -11,7 +11,7 @@
 		{translate key="plugins.generic.similarTitlesReport.displayName"}
 	</h1>
 
-	<div class="app__contentPanel">
+	<div id="similarTitlesReport" class="app__contentPanel">
 		<p>
 			{translate key="plugins.generic.similarTitlesReport.description" threshold=$threshold}
 		</p>

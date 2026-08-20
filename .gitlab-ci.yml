@@ -7,11 +7,24 @@ include:
     file:
       - 'templates/groups/pkp_plugin.yml'
       - 'templates/groups/ojs/unit_tests.yml'
-      - 'templates/groups/ojs/cypress_tests.yml'
 
-# Additive report plugin: it does not change core behaviour, so the native OJS
-# regression suite is skipped. The plugin's own Cypress specs still run via
-# plugin_integration_tests_ojs.
-ojs_integration_tests:
-  rules:
-    - when: never
+plugin_http_smoke_ojs:
+  extends: plugin_unit_tests_ojs
+  script:
+    - plugin_type=$(awk -F "[><]" '/type/{print $3}' "$CI_PROJECT_DIR/version.xml")
+    - plugin_dir=$(echo "${plugin_type//./\/}")
+    - mysql --user="$MARIADB_USER" --password="$MARIADB_PASSWORD" --host="$MARIADB_HOST" "$MARIADB_DATABASE" < /tmp/dump.sql
+    - mkdir -p "/var/www/$APPLICATION/$plugin_dir"
+    - cp -r "$CI_PROJECT_DIR" "/var/www/$APPLICATION/$plugin_dir/$PLUGIN_NAME"
+    - cd "/var/www/$APPLICATION"
+    - php tools/upgrade.php upgrade
+    - php lib/pkp/tools/appKey.php generate --force
+    - update-alternatives --set php "/usr/bin/php$PHP_VERSION"
+    - plugin_name_lower=$(echo "$PLUGIN_NAME" | tr '[:upper:]' '[:lower:]')plugin
+    - mysql --user="$MARIADB_USER" --password="$MARIADB_PASSWORD" --host="$MARIADB_HOST" "$MARIADB_DATABASE" -e "INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES ('$plugin_name_lower', 1, 'enabled', '1', 'bool') ON DUPLICATE KEY UPDATE setting_value = '1', setting_type = 'bool';"
+    - php -S 127.0.0.1:8000 -t . 2> "$CI_PROJECT_DIR/http_smoke_php_error.log" &
+    - bash "$CI_PROJECT_DIR/tests/http-smoke.sh" http://127.0.0.1:8000
+  artifacts:
+    when: always
+    paths:
+      - http_smoke_php_error.log
