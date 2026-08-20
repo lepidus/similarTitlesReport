@@ -17,14 +17,15 @@ plugin_http_smoke_ojs:
     - mkdir -p "/var/www/$APPLICATION/$plugin_dir"
     - cp -r "$CI_PROJECT_DIR" "/var/www/$APPLICATION/$plugin_dir/$PLUGIN_NAME"
     - cd "/var/www/$APPLICATION"
+    - update-alternatives --set php "/usr/bin/php$PHP_VERSION"
     - php tools/upgrade.php upgrade
     - php lib/pkp/tools/appKey.php generate --force
-    - update-alternatives --set php "/usr/bin/php$PHP_VERSION"
     - plugin_name_lower=$(echo "$PLUGIN_NAME" | tr '[:upper:]' '[:lower:]')plugin
     - mysql --user="$MARIADB_USER" --password="$MARIADB_PASSWORD" --host="$MARIADB_HOST" "$MARIADB_DATABASE" -e "INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES ('$plugin_name_lower', 1, 'enabled', '1', 'bool') ON DUPLICATE KEY UPDATE setting_value = '1', setting_type = 'bool';"
     - php -S 127.0.0.1:8000 -t . 2> "$CI_PROJECT_DIR/http_smoke_php_error.log" &
     - bash "$CI_PROJECT_DIR/tests/http-smoke.sh" http://127.0.0.1:8000
   artifacts:
     when: always
+    reports: null
     paths:
       - http_smoke_php_error.log
